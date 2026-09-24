@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node seed.js",
-    "test": "node test-e2e.js",
+    "test": "node test-suite.js",
     "chroma": "python -m uvicorn chromadb.app:app --host 127.0.0.1 --port 8000"
   },
   "dependencies": {
