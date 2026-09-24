@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sovereign Edge // Conversational Voice AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* MODERN LIGHT THEME (DEFAULT) */
+      --bg-app: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-elevated: #ffffff;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+      
+      --user-bubble-bg: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+      --user-bubble-text: #ffffff;
+      
+      --green: #10b981;
+      --green-light: #ecfdf5;
+      --green-border: #a7f3d0;
+      --green-text: #059669;
+      
+      --purple: #8b5cf6;
+      --purple-light: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #7c3aed;
+      
+      --red: #ef4444;
+      --red-light: #fef2f2;
+      --red-border: #fecaca;
+      
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 14px -2px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.08);
+      
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    /* MODERN SLATE DARK THEME TOGGLE */
+    body.dark-mode {
+      --bg-app: #090d16;
+      --bg-surface: #111827;
+      --bg-subtle: #1f2937;
+      --bg-card: #111827;
+      --bg-elevated: #1e293b;
+      --border-subtle: #2d3748;
+      --border-strong: #3f4d67;
+      
+      --text-main: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --text-faint: #64748b;
+      
+      --primary-light: rgba(79, 70, 229, 0.15);
+      --user-bubble-bg: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      
+      --green-light: rgba(16, 185, 129, 0.15);
+      --green-border: rgba(16, 185, 129, 0.3);
+      --green-text: #34d399;
+      
+      --purple-light: rgba(139, 92, 246, 0.15);
+      --purple-border: rgba(139, 92, 246, 0.3);
+      --purple-text: #c084fc;
+      
+      --red-light: rgba(239, 68, 68, 0.15);
+      --red-border: rgba(239, 68, 68, 0.3);
+      
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 14px -2px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 12px 30px -4px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-app);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOP NAVIGATION BAR */
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-main);
+    }
+
+    .badge-edge {
+      font-size: 10px;
+      text-transform: uppercase;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* CONTROLS IN HEADER */
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-subtle);
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      transition: all 0.2s ease;
+    }
+
+    .control-box:hover {
+      border-color: var(--border-strong);
+    }
+
+    .control-box label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .select-dropdown {
+      background: transparent;
+      color: var(--text-main);
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-dropdown option {
+      background: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-faint);
+      position: relative;
+    }
+
+    .status-dot.online {
+      background: var(--green);
+    }
+
+    .status-dot.online::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    .status-dot.offline {
+      background: var(--red);
+    }
+
+    .stop-speech-btn {
+      background: var(--red-light);
+      border: 1px solid var(--red-border);
+      color: var(--red);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .stop-speech-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .theme-toggle-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    /* TELEMETRY HUD STRIP */
+    .telemetry-strip {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .telemetry-label {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .telemetry-val {
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .telemetry-val.rag {
+      color: var(--green-text);
+      background: var(--green-light);
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--green-border);
+    }
+
+    .telemetry-val.direct {
+      color: var(--purple-text);
+      background: var(--purple-light);
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--purple-border);
+    }
+
+    /* SOUNDWAVE ANIMATION */
+    .soundwave {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      height: 16px;
+      margin-left: 4px;
+    }
+
+    .soundwave-bar {
+      width: 3px;
+      height: 100%;
+      background: var(--primary);
+      border-radius: 3px;
+      animation: soundwave-pulse 1s ease-in-out infinite;
+    }
+
+    .soundwave-bar:nth-child(2) { animation-delay: 0.15s; }
+    .soundwave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .soundwave-bar:nth-child(4) { animation-delay: 0.45s; }
+
+    @keyframes soundwave-pulse {
+      0%, 100% { height: 4px; opacity: 0.4; }
+      50% { height: 16px; opacity: 1; }
+    }
+
+    .soundwave.paused .soundwave-bar {
+      animation: none;
+      height: 4px;
+      opacity: 0.3;
+    }
+
+    /* MAIN CONTAINER */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 1080px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 24px;
+      gap: 16px;
+    }
+
+    /* CHAT CARD */
+    .chat-card {
+      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      min-height: 560px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    /* MESSAGE BUBBLES */
+    .message-wrapper {
+      display: flex;
+      gap: 14px;
+      max-width: 82%;
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-wrapper.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-wrapper.assistant {
+      align-self: flex-start;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+      font-family: var(--font-sans);
+    }
+
+    .user .avatar {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+    }
+
+    .assistant .avatar {
+      background: var(--bg-subtle);
+      color: var(--primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .message-body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .user .message-meta {
+      justify-content: flex-end;
+    }
+
+    .message-bubble {
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+      position: relative;
+    }
+
+    .user .message-bubble {
+      background: var(--user-bubble-bg);
+      color: var(--user-bubble-text);
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+
+    .assistant .message-bubble {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-bottom-left-radius: 4px;
+    }
+
+    .cursor-blink {
+      display: inline-block;
+      width: 6px;
+      height: 14px;
+      background: var(--primary);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+      border-radius: 2px;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* ROUTER BADGE INSIDE MESSAGE */
+    .router-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .router-badge.rag {
+      background: var(--green-light);
+      color: var(--green-text);
+      border: 1px solid var(--green-border);
+    }
+
+    .router-badge.direct {
+      background: var(--purple-light);
+      color: var(--purple-text);
+      border: 1px solid var(--purple-border);
+    }
+
+    /* RAG ACCORDION PREVIEW */
+    .rag-accordion {
+      margin-top: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--green-border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .rag-accordion summary {
+      cursor: pointer;
+      color: var(--green-text);
+      font-weight: 600;
+      outline: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .rag-accordion-content {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .rag-doc-item {
+      background: var(--bg-subtle);
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--green);
+    }
+
+    .rag-doc-item strong {
+      color: var(--text-main);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    /* SUGGESTED PROMPTS BAR */
+    .chips-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 0 4px 6px 4px;
+      scrollbar-width: thin;
+    }
+
+    .chip-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .chip-btn:hover {
+      background: var(--bg-elevated);
+      color: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chip-btn .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .chip-btn .tag.rag {
+      background: var(--green-light);
+      color: var(--green-text);
+      border: 1px solid var(--green-border);
+    }
+
+    .chip-btn .tag.direct {
+      background: var(--purple-light);
+      color: var(--purple-text);
+      border: 1px solid var(--purple-border);
+    }
+
+    /* CHAT INPUT AREA */
+    .input-wrapper {
+      padding: 16px 20px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .input-field {
+      flex: 1;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 13px 18px;
+      color: var(--text-main);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    }
+
+    .input-field:focus {
+      background: var(--bg-surface);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .input-field::placeholder {
+      color: var(--text-faint);
+    }
+
+    .send-btn {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border: none;
+      padding: 13px 22px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s, opacity 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+
+    .send-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 14px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <h1>SOVEREIGN EDGE <span class="badge-edge">100% LOCAL</span></h1>
+        <p>Llama-3.2 // Xenova Semantic Router // Isolated RAG // Adaptive Voice</p>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <!-- Tenant Selector (User A / User B) -->
+      <div class="control-box">
+        <label for="tenantSelect">Tenant:</label>
+        <select id="tenantSelect" class="select-dropdown">
+          <option value="user_A">User A (Alice Chen - DevOps)</option>
+          <option value="user_B">User B (Bob Martinez - CFO)</option>
+        </select>
+      </div>
+
+      <!-- Voice Engine Selector -->
+      <div class="control-box">
+        <label for="voiceEngineSelect">Voice Engine:</label>
+        <select id="voiceEngineSelect" class="select-dropdown">
+          <option value="browser" selected>Browser Edge Speech (Instant 0ms)</option>
+          <option value="kokoro">Kokoro-82M ONNX (Edge Neural)</option>
+          <option value="off">Voice Output Off (Text Only)</option>
+        </select>
+      </div>
+
+      <!-- Stop Speech Button (Visible when speech is playing) -->
+      <button id="stopSpeechBtn" class="stop-speech-btn" title="Stop speech playback">
+        <span>⏹</span>
+        <span>Stop Voice</span>
+      </button>
+
+      <!-- Theme Toggle (Light / Dark Mode) -->
+      <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Light / Dark Mode">
+        <span id="themeIcon">🌙</span>
+      </button>
+
+      <!-- WebSocket Status -->
+      <div class="status-pill">
+        <div id="statusDot" class="status-dot offline"></div>
+        <span id="statusText">CONNECTING</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- TELEMETRY HUD STRIP -->
+  <div class="telemetry-strip">
+    <div class="telemetry-item">
+      <span class="telemetry-label">Router Core:</span>
+      <span class="telemetry-val">all-MiniLM-L6-v2 (CPU)</span>
+    </div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">Threshold:</span>
+      <span class="telemetry-val">0.65 Cosine Sim</span>
+    </div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">Last Score:</span>
+      <span id="hudScore" class="telemetry-val">-</span>
+    </div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">Decision:</span>
+      <span id="hudDecision" class="telemetry-val">-</span>
+    </div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">Isolation Filter:</span>
+      <span id="hudTenant" class="telemetry-val">WHERE user_id = 'user_A'</span>
+    </div>
+    <div class="telemetry-item" style="margin-left: auto;">
+      <span class="telemetry-label">Voice Output:</span>
+      <div id="hudSoundwave" class="soundwave paused">
+        <div class="soundwave-bar"></div>
+        <div class="soundwave-bar"></div>
+        <div class="soundwave-bar"></div>
+        <div class="soundwave-bar"></div>
+      </div>
+      <span id="hudAudioState" style="color: var(--text-muted); margin-left: 6px; font-weight: 500;">Idle</span>
+    </div>
+  </div>
+
+  <!-- MAIN CHAT CONTAINER -->
+  <main>
+    <div class="chat-card">
+      <div id="chatMessages" class="chat-messages">
+        <!-- System Welcome Message -->
+        <div class="message-wrapper assistant">
+          <div class="avatar">AI</div>
+          <div class="message-body">
+            <div class="message-meta">
+              <span>SOVEREIGN AGENT</span>
+              <span>•</span>
+              <span>READY (CONVERSATIONAL BARGE-IN ACTIVE)</span>
+            </div>
+            <div class="message-bubble">
+              Welcome to the Sovereign Edge Conversational Platform.
+              <br><br>
+              <strong>Zero-Latency Conversational Architecture:</strong>
+              <br>
+              • <strong>Instant Chat:</strong> You can type and chat freely at any time without waiting for speech to finish.
+              <br>
+              • <strong>Barge-In / Interrupt:</strong> Sending a new question immediately stops previous speech and starts the new response.
+              <br>
+              • <strong>Strict Tenant Isolation:</strong> User A and User B document partitions are completely segregated at the cryptographic and vector levels.
+              <br>
+              • <strong>Voice Engines:</strong> Switch between <strong>Browser Edge Speech</strong> (instant 0ms) and <strong>Kokoro-82M ONNX</strong> (neural edge weights) using the selector above.
+              <br><br>
+              Click a suggested query below or ask your own question to begin!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUICK PROMPT CHIPS -->
+      <div style="padding: 8px 20px 0 20px;">
+        <div id="chipsContainer" class="chips-bar">
+          <!-- Dynamically populated based on active tenant -->
+        </div>
+      </div>
+
+      <!-- INPUT BAR (ALWAYS ACCESSIBLE, NEVER DISABLED) -->
+      <div class="input-wrapper">
+        <input 
+          id="userInput" 
+          type="text" 
+          class="input-field" 
+          placeholder="Ask anything or query confidential documents (Type anytime)..." 
+          autocomplete="off"
+        />
+        <button id="sendBtn" class="send-btn">
+          <span>SEND</span>
+          <span>⚡</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Sovereign Edge Conversational Platform // 100% Local Processing // Zero Cloud Dependencies
+  </footer>
+
+  <!-- CLIENT-SIDE LOGIC & DUAL VOICE PIPELINE -->
+  <script>
+    // ========================================================================
+    // THEME CONTROLLER (DEFAULT LIGHT, OPTIONAL SLATE DARK)
+    // ========================================================================
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    
+    // Check saved preference or default to clean light
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-mode');
+      themeIcon.textContent = '☀️';
+    } else {
+      document.body.classList.remove('dark-mode');
+      themeIcon.textContent = '🌙';
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.body.classList.toggle('dark-mode');
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // ========================================================================
+    // STATE & DOM REFS
+    // ========================================================================
+    const tenantSelect = document.getElementById('tenantSelect');
+    const voiceEngineSelect = document.getElementById('voiceEngineSelect');
+    const stopSpeechBtn = document.getElementById('stopSpeechBtn');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const hudScore = document.getElementById('hudScore');
+    const hudDecision = document.getElementById('hudDecision');
+    const hudTenant = document.getElementById('hudTenant');
+    const hudSoundwave = document.getElementById('hudSoundwave');
+    const hudAudioState = document.getElementById('hudAudioState');
+    const chatMessages = document.getElementById('chatMessages');
+    const chipsContainer = document.getElementById('chipsContainer');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    let currentUserId = tenantSelect.value;
+    let voiceEngine = voiceEngineSelect.value; // 'browser', 'kokoro', or 'off'
+    let activeBubble = null;
+    let activeCursor = null;
+    let currentGenId = 0;
+    let isBrowserSpeaking = false;
+    let clientSpeechBuffer = '';
+
+    // ========================================================================
+    // GAPLESS SEQUENTIAL WEB AUDIO API PIPELINE (FOR KOKORO WAV CHUNKS)
+    // ========================================================================
+    class GaplessAudioQueue {
+      constructor() {
+        this.ctx = null;
+        this.gainNode = null;
+        this.nextStartTime = 0;
+        this.activeSources = [];
+        this.queuedChunksCount = 0;
+        this.isPlaying = false;
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContextClass();
+          this.gainNode = this.ctx.createGain();
+          this.gainNode.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      async enqueueWav(arrayBuffer) {
+        if (voiceEngine !== 'kokoro') return;
+        this.ensureContext();
+
+        try {
+          const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+          this.schedule(audioBuffer);
+        } catch (err) {
+          console.error('[Web Audio] Error decoding audio chunk:', err);
+        }
+      }
+
+      schedule(audioBuffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(this.gainNode);
+
+        const currentTime = this.ctx.currentTime;
+        if (this.nextStartTime < currentTime) {
+          this.nextStartTime = currentTime + 0.03;
+        }
+
+        source.start(this.nextStartTime);
+        this.nextStartTime += audioBuffer.duration;
+        this.queuedChunksCount++;
+        this.activeSources.push(source);
+
+        this.updateUiState(true);
+
+        source.onended = () => {
+          this.queuedChunksCount = Math.max(0, this.queuedChunksCount - 1);
+          const index = this.activeSources.indexOf(source);
+          if (index !== -1) this.activeSources.splice(index, 1);
+
+          if (this.queuedChunksCount === 0 || this.ctx.currentTime >= this.nextStartTime - 0.05) {
+            this.updateUiState(false);
+          }
+        };
+      }
+
+      stopAll() {
+        for (const s of this.activeSources) {
+          try { s.stop(); } catch (e) {}
+        }
+        this.activeSources = [];
+        this.nextStartTime = 0;
+        this.queuedChunksCount = 0;
+        this.updateUiState(false);
+      }
+
+      updateUiState(playing) {
+        this.isPlaying = playing;
+        if (playing) {
+          hudSoundwave.classList.remove('paused');
+          hudAudioState.textContent = `Streaming Kokoro (${this.queuedChunksCount} queued)`;
+          hudAudioState.style.color = 'var(--primary)';
+          stopSpeechBtn.style.display = 'inline-flex';
+        } else {
+          if (!isBrowserSpeaking) {
+            hudSoundwave.classList.add('paused');
+            hudAudioState.textContent = 'Idle';
+            hudAudioState.style.color = 'var(--text-muted)';
+            stopSpeechBtn.style.display = 'none';
+          }
+        }
+      }
+    }
+
+    const audioQueue = new GaplessAudioQueue();
+
+    // ========================================================================
+    // BROWSER EDGE SPEECH SYNTHESIS ENGINE (ZERO-LATENCY STREAMING)
+    // ========================================================================
+    function queueBrowserSpeechChunk(text) {
+      if (voiceEngine !== 'browser' || !('speechSynthesis' in window)) return;
+      
+      const clean = text.replace(/[*_#`~[\]]/g, '').trim();
+      if (!clean) return;
+
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.rate = 1.08;
+      utterance.pitch = 1.0;
+
+      // Select high quality natural voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Online') || v.name.includes('Google') || v.name.includes('Microsoft'))) || voices.find(v => v.lang.startsWith('en'));
+      if (naturalVoice) utterance.voice = naturalVoice;
+
+      utterance.onstart = () => {
+        isBrowserSpeaking = true;
+        hudSoundwave.classList.remove('paused');
+        hudAudioState.textContent = 'Speaking (Instant Edge)';
+        hudAudioState.style.color = 'var(--primary)';
+        stopSpeechBtn.style.display = 'inline-flex';
+      };
+
+      utterance.onend = () => {
+        if (!window.speechSynthesis.speaking) {
+          isBrowserSpeaking = false;
+          if (!audioQueue.isPlaying) {
+            hudSoundwave.classList.add('paused');
+            hudAudioState.textContent = 'Idle';
+            hudAudioState.style.color = 'var(--text-muted)';
+            stopSpeechBtn.style.display = 'none';
+          }
+        }
+      };
+
+      // Workaround for Chrome speech pause bug
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopAllAudio() {
+      audioQueue.stopAll();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isBrowserSpeaking = false;
+      clientSpeechBuffer = '';
+      hudSoundwave.classList.add('paused');
+      hudAudioState.textContent = 'Idle';
+      hudAudioState.style.color = 'var(--text-muted)';
+      stopSpeechBtn.style.display = 'none';
+    }
+
+    stopSpeechBtn.addEventListener('click', stopAllAudio);
+
+    voiceEngineSelect.addEventListener('change', (e) => {
+      voiceEngine = e.target.value;
+      stopAllAudio();
+      const labels = {
+        browser: "Browser Edge Speech (Instant 0ms)",
+        kokoro: "Kokoro-82M ONNX (Edge Neural)",
+        off: "Voice Disabled (Text Only)"
+      };
+      appendSystemNotification(`Voice engine switched to: <strong>${labels[voiceEngine]}</strong>.`);
+    });
+
+    // ========================================================================
+    // TENANT SWITCHING & CHIPS
+    // ========================================================================
+    const TENANT_PROMPTS = {
+      user_A: [
+        { label: "Emergency Recovery Secret", tag: "RAG", query: "What is my emergency recovery secret passphrase?" },
+        { label: "Account Dossier & Clearance", tag: "RAG", query: "Show me my personal account dossier and clearance level." },
+        { label: "General Knowledge Bypass", tag: "DIRECT", query: "Explain what an edge node is in 10 words." }
+      ],
+      user_B: [
+        { label: "Swiss Escrow Code", tag: "RAG", query: "What is my authorized Swiss escrow account code?" },
+        { label: "Q3 Financial Audit Figures", tag: "RAG", query: "What are my quarterly budget figures and CAPEX allocation?" },
+        { label: "Cross-Tenant Probe (Negative Test)", tag: "RAG", query: "What is my emergency recovery secret passphrase?" }
+      ]
+    };
+
+    function renderPromptChips() {
+      chipsContainer.innerHTML = '';
+      const prompts = TENANT_PROMPTS[currentUserId] || [];
+      prompts.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'chip-btn';
+        btn.innerHTML = `<span class="tag ${p.tag.toLowerCase()}">${p.tag}</span> <span>${p.label}</span>`;
+        btn.addEventListener('click', () => {
+          userInput.value = p.query;
+          sendMessage();
+        });
+        chipsContainer.appendChild(btn);
+      });
+      hudTenant.textContent = `WHERE user_id = '${currentUserId}'`;
+    }
+
+    tenantSelect.addEventListener('change', (e) => {
+      currentUserId = e.target.value;
+      renderPromptChips();
+      stopAllAudio();
+      appendSystemNotification(`Switched active tenant to: <strong>${currentUserId === 'user_A' ? 'User A (Alice Chen)' : 'User B (Bob Martinez)'}</strong>. Vector filter updated to <code>WHERE user_id = '${currentUserId}'</code>.`);
+    });
+
+    renderPromptChips();
+
+    // ========================================================================
+    // WEBSOCKET CONNECTION SETUP
+    // ========================================================================
+    let ws = null;
+    let reconnectTimeout = null;
+
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer'; // Enable binary frames for Kokoro audio
+
+      ws.onopen = () => {
+        console.log('[WebSocket] Connected to Edge server');
+        statusDot.className = 'status-dot online';
+        statusText.textContent = 'CONNECTED (EDGE)';
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      };
+
+      ws.onclose = () => {
+        console.warn('[WebSocket] Connection closed. Retrying...');
+        statusDot.className = 'status-dot offline';
+        statusText.textContent = 'RECONNECTING';
+        reconnectTimeout = setTimeout(connectWebSocket, 2000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('[WebSocket] Error:', err);
+      };
+
+      ws.onmessage = async (event) => {
+        // BINARY FRAME: Direct WAV audio chunk from Kokoro TTS
+        if (event.data instanceof ArrayBuffer) {
+          audioQueue.enqueueWav(event.data);
+          return;
+        }
+
+        // TEXT / JSON CONTROL MESSAGE
+        let data;
+        try {
+          data = JSON.parse(event.data);
+        } catch (e) {
+          console.error('[WebSocket] Failed to parse JSON:', event.data);
+          return;
+        }
+
+        handleServerMessage(data);
+      };
+    }
+
+    connectWebSocket();
+
+    // ========================================================================
+    // MESSAGE HANDLING & REALTIME STREAMING UI
+    // ========================================================================
+    function handleServerMessage(data) {
+      if (data.type === 'router_decision') {
+        // Update HUD
+        hudScore.textContent = `${data.similarity} / ${data.threshold}`;
+        hudDecision.className = `telemetry-val ${data.shouldTriggerRag ? 'rag' : 'direct'}`;
+        hudDecision.textContent = data.route;
+
+        // Add badge to active assistant message
+        if (activeBubble) {
+          const badge = document.createElement('div');
+          badge.className = `router-badge ${data.shouldTriggerRag ? 'rag' : 'direct'}`;
+          badge.innerHTML = data.shouldTriggerRag
+            ? `⚡ ROUTER: COSINE SIM ${data.similarity} &gt; 0.65 ➔ CHROMA RAG (${data.userId})`
+            : `⚡ ROUTER: COSINE SIM ${data.similarity} &lt;= 0.65 ➔ DIRECT OLLAMA`;
+          activeBubble.insertBefore(badge, activeBubble.firstChild);
+        }
+      } 
+      else if (data.type === 'rag_context') {
+        // Render RAG Accordion in message bubble
+        if (activeBubble && data.documents && data.documents.length > 0) {
+          const accordion = document.createElement('details');
+          accordion.className = 'rag-accordion';
+          accordion.innerHTML = `
+            <summary>🔒 Retrieved Context (${data.count} Docs Isolated for ${data.userId})</summary>
+            <div class="rag-accordion-content">
+              ${data.documents.map((doc, idx) => `
+                <div class="rag-doc-item">
+                  <strong>[Doc ${idx + 1}] ${data.metadatas[idx]?.title || 'Confidential'}</strong>
+                  <div>${escapeHtml(doc)}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+          activeBubble.appendChild(accordion);
+        }
+      } 
+      else if (data.type === 'token') {
+        // Stream text token into active message
+        if (activeBubble && activeCursor) {
+          const textNode = document.createTextNode(data.token);
+          activeBubble.insertBefore(textNode, activeCursor);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Real-Time Streaming Browser Speech (Instant zero-delay speech synthesis)
+        if (voiceEngine === 'browser') {
+          clientSpeechBuffer += data.token;
+          const match = clientSpeechBuffer.match(/^([\s\S]*?[.?!]+)([\s\r\n]+)/);
+          if (match) {
+            const chunk = match[1].trim();
+            clientSpeechBuffer = clientSpeechBuffer.slice(match[0].length);
+            queueBrowserSpeechChunk(chunk);
+          }
+        }
+      } 
+      else if (data.type === 'text_done' || data.type === 'done') {
+        // TEXT STREAMING FINISHED!
+        if (activeCursor) {
+          activeCursor.remove();
+          activeCursor = null;
+        }
+
+        // Flush any remaining text in speech buffer
+        if (voiceEngine === 'browser' && clientSpeechBuffer.trim().length > 0) {
+          queueBrowserSpeechChunk(clientSpeechBuffer.trim());
+          clientSpeechBuffer = '';
+        }
+
+        userInput.focus();
+      } 
+      else if (data.type === 'audio_done') {
+        console.log('[Server] Kokoro audio stream transmission complete.');
+      }
+      else if (data.type === 'warning') {
+        console.warn('[Server Warning]:', data.message);
+      } 
+      else if (data.type === 'error') {
+        console.error('[Server Error]:', data.message);
+        if (activeCursor) activeCursor.remove();
+        if (activeBubble) {
+          const errDiv = document.createElement('div');
+          errDiv.style.color = 'var(--red)';
+          errDiv.style.marginTop = '8px';
+          errDiv.textContent = `❌ ${data.message}`;
+          activeBubble.appendChild(errDiv);
+        }
+      }
+    }
+
+    // ========================================================================
+    // SEND MESSAGE (WITH CONVERSATIONAL BARGE-IN / INTERRUPTION)
+    // ========================================================================
+    function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('Edge server connection is not active yet.');
+        return;
+      }
+
+      // CONVERSATIONAL BARGE-IN:
+      // Stop previous audio immediately when user asks a new question!
+      stopAllAudio();
+      audioQueue.ensureContext();
+
+      // Render User Message
+      appendUserMessage(text, currentUserId);
+      userInput.value = '';
+
+      // Prepare Assistant Message Placeholder
+      prepareAssistantMessage();
+
+      // Send payload with voice_engine flag to backend so backend knows whether to generate Kokoro TTS
+      const payload = {
+        text: text,
+        user_id: currentUserId,
+        voice_engine: voiceEngine
+      };
+      ws.send(JSON.stringify(payload));
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      } else if (e.key === 'Escape') {
+        stopAllAudio();
+      }
+    });
+
+    // ========================================================================
+    // DOM HELPERS
+    // ========================================================================
+    function appendUserMessage(text, userId) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-wrapper user';
+      wrapper.innerHTML = `
+        <div class="avatar">${userId === 'user_A' ? 'UA' : 'UB'}</div>
+        <div class="message-body">
+          <div class="message-meta">
+            <span>${userId === 'user_A' ? 'Alice Chen (DevOps)' : 'Bob Martinez (CFO)'}</span>
+            <span>•</span>
+            <span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="message-bubble">${escapeHtml(text)}</div>
+        </div>
+      `;
+      chatMessages.appendChild(wrapper);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function prepareAssistantMessage() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-wrapper assistant';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = 'AI';
+
+      const body = document.createElement('div');
+      body.className = 'message-body';
+
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      meta.innerHTML = `<span>SOVEREIGN EDGE AI</span> <span>•</span> <span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+
+      activeBubble = document.createElement('div');
+      activeBubble.className = 'message-bubble';
+
+      activeCursor = document.createElement('span');
+      activeCursor.className = 'cursor-blink';
+      activeBubble.appendChild(activeCursor);
+
+      body.appendChild(meta);
+      body.appendChild(activeBubble);
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(body);
+
+      chatMessages.appendChild(wrapper);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendSystemNotification(htmlContent) {
+      const notif = document.createElement('div');
+      notif.style.textAlign = 'center';
+      notif.style.fontSize = '12px';
+      notif.style.color = 'var(--text-muted)';
+      notif.style.padding = '8px 16px';
+      notif.style.margin = '4px 0';
+      notif.style.background = 'var(--bg-subtle)';
+      notif.style.borderRadius = '8px';
+      notif.style.border = '1px solid var(--border-subtle)';
+      notif.innerHTML = htmlContent;
+      chatMessages.appendChild(notif);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>
