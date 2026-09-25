@@ -278,6 +278,27 @@
       background: rgba(239, 68, 68, 0.2);
     }
 
+    .clear-history-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .clear-history-btn:hover {
+      background: var(--red-light);
+      border-color: var(--red-border);
+      color: var(--red);
+    }
+
     .theme-toggle-btn {
       background: var(--bg-subtle);
       border: 1px solid var(--border-subtle);
@@ -777,6 +798,12 @@
         <span>Stop Voice</span>
       </button>
 
+      <!-- Clear History Button -->
+      <button id="clearHistoryBtn" class="clear-history-btn" title="Clear persistent history for this tenant">
+        <span>🗑️</span>
+        <span>Clear History</span>
+      </button>
+
       <!-- Theme Toggle -->
       <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Light / Dark Mode">
         <span id="themeIcon">🌙</span>
@@ -1224,6 +1251,7 @@
       currentUserId = e.target.value;
       renderPromptChips();
       stopAllAudio();
+      await loadChatHistory(currentUserId);
       await authenticateAndConnect();
     });
 
@@ -1291,7 +1319,9 @@
       }
     }
 
-    authenticateAndConnect();
+    loadChatHistory(currentUserId).then(() => {
+      authenticateAndConnect();
+    });
 
     // ========================================================================
     // MESSAGE HANDLING & REALTIME STREAMING UI
@@ -1503,6 +1533,115 @@
           '"': '&quot;'
         }[tag] || tag)
       );
+    }
+
+    // ========================================================================
+    // PERSISTENT HISTORY RESTORATION & MANAGEMENT
+    // ========================================================================
+    function appendStoredUserMessage(text, userId, timestamp) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-wrapper user';
+      const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      wrapper.innerHTML = `
+        <div class="avatar">${userId === 'user_A' ? 'UA' : 'UB'}</div>
+        <div class="message-body">
+          <div class="message-meta">
+            <span>${userId === 'user_A' ? 'Alice Chen (DevOps Lead)' : 'Bob Martinez (CFO)'}</span>
+            <span>•</span>
+            <span>${timeStr}</span>
+          </div>
+          <div class="message-bubble">${escapeHtml(text)}</div>
+        </div>
+      `;
+      chatMessages.appendChild(wrapper);
+    }
+
+    function appendStoredAssistantMessage(text, route, intent, timestamp) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-wrapper assistant';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = 'AI';
+
+      const body = document.createElement('div');
+      body.className = 'message-body';
+
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      meta.innerHTML = `<span>SOVEREIGN EDGE AI</span> <span>•</span> <span>${timeStr}</span>`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+
+      if (route) {
+        const isRag = route === 'CHROMA_RAG';
+        const isVerify = intent === 'VERIFY_DETERMINISTIC';
+        const badgeClass = isVerify ? 'verify' : (isRag ? 'rag' : 'direct');
+        const badge = document.createElement('div');
+        badge.className = `router-badge ${badgeClass}`;
+        if (isVerify) {
+          badge.innerHTML = `🛡️ VERIFICATION ENGINE: DETERMINISTIC COMPARISON`;
+        } else if (isRag) {
+          badge.innerHTML = `⚡ ROUTER: INTENT [${intent || 'RAG'}] ➔ CHROMA RAG`;
+        } else {
+          badge.innerHTML = `⚡ ROUTER: INTENT [${intent || 'DIRECT'}] ➔ DIRECT LLM`;
+        }
+        bubble.appendChild(badge);
+      }
+
+      const textNode = document.createElement('div');
+      textNode.textContent = text;
+      bubble.appendChild(textNode);
+
+      body.appendChild(meta);
+      body.appendChild(bubble);
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(body);
+
+      chatMessages.appendChild(wrapper);
+    }
+
+    async function loadChatHistory(tenant) {
+      try {
+        chatMessages.innerHTML = '';
+        const res = await fetch(`/api/history?tenant=${tenant}&limit=50`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.history && data.history.length > 0) {
+          appendSystemNotification(`📜 Restored ${data.history.length} persistent messages for <strong>${tenant === 'user_A' ? 'Alice Chen' : 'Bob Martinez'}</strong>`);
+          for (const m of data.history) {
+            if (m.role === 'user') {
+              appendStoredUserMessage(m.content, m.userId || tenant, m.timestamp);
+            } else if (m.role === 'assistant') {
+              appendStoredAssistantMessage(m.content, m.route, m.intent, m.timestamp);
+            }
+          }
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+      } catch (err) {
+        console.error('Failed to load chat history:', err);
+      }
+    }
+
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    if (clearHistoryBtn) {
+      clearHistoryBtn.addEventListener('click', async () => {
+        const tenantName = currentUserId === 'user_A' ? 'Alice Chen (User A)' : 'Bob Martinez (User B)';
+        if (!confirm(`Clear persistent chat history for ${tenantName}?`)) {
+          return;
+        }
+        try {
+          const res = await fetch(`/api/history/clear?tenant=${currentUserId}`, { method: 'POST' });
+          if (res.ok) {
+            chatMessages.innerHTML = '';
+            appendSystemNotification(`🗑️ Persistent conversation history cleared for <strong>${currentUserId}</strong>.`);
+          }
+        } catch (err) {
+          console.error('Failed to clear history:', err);
+        }
+      });
     }
   </script>
 </body>

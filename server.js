@@ -44,6 +44,16 @@ const { KokoroTTS } = await import('kokoro-js');
 const { pipeline } = await import('@xenova/transformers');
 const { ChromaClient } = await import('chromadb');
 
+// Sovereign Edge Persistent Storage Engine
+import {
+  initStorage,
+  saveMessage,
+  getRecentContextMessages,
+  getHistory,
+  clearHistory,
+  getStorageStats
+} from './storage.js';
+
 // ============================================================================
 // CONFIGURATION & ENVIRONMENT
 // ============================================================================
@@ -374,6 +384,10 @@ async function initServices() {
   console.log('='.repeat(70));
   console.log('🚀 SOVEREIGN EDGE AI CONVERSATIONAL PLATFORM - INITIALIZING');
   console.log('='.repeat(70));
+
+  // 0. Initialize Persistent Storage Engine
+  console.log('[0/4] Initializing Sovereign Edge Persistent Storage...');
+  await initStorage();
 
   // 1. Initialize Kokoro ONNX TTS on CPU
   console.log('[1/4] Loading Kokoro-82M ONNX TTS on CPU...');
@@ -880,6 +894,36 @@ app.get('/api/auth/token', async (req, reply) => {
   return { token, profile: TENANT_PROFILES[tenant] };
 });
 
+// REST History for Frontend & Persistent Session Restoration
+app.get('/api/history', async (req, reply) => {
+  const tenant = req.query.tenant || 'user_A';
+  const limit = parseInt(req.query.limit || '100', 10);
+  if (!TENANT_PROFILES[tenant]) {
+    reply.code(400);
+    return { error: 'Unknown tenant' };
+  }
+  return {
+    tenant,
+    history: getHistory(tenant, limit)
+  };
+});
+
+// Clear persistent history for a tenant
+app.post('/api/history/clear', async (req, reply) => {
+  const tenant = req.query.tenant || (req.body && req.body.tenant) || 'user_A';
+  if (!TENANT_PROFILES[tenant]) {
+    reply.code(400);
+    return { error: 'Unknown tenant' };
+  }
+  clearHistory(tenant);
+  return { success: true, tenant };
+});
+
+// REST Storage Statistics
+app.get('/api/storage/stats', async () => {
+  return getStorageStats();
+});
+
 // Robust, crash-proof WebSocket send helper
 function safeSend(ws, payload, options) {
   if (ws && ws.readyState === 1) { // 1 === WebSocket.OPEN
@@ -1064,6 +1108,23 @@ app.get('/ws', { websocket: true }, (socket, req) => {
             voiceEngine: voice_engine
           }
         });
+
+        // Persist turn in tenant-isolated storage
+        saveMessage({
+          userId: authenticatedUserId,
+          role: 'user',
+          content: text,
+          route: routeInfo.route,
+          intent: routeInfo.intent
+        });
+        saveMessage({
+          userId: authenticatedUserId,
+          role: 'assistant',
+          content: fullResponseText,
+          route: routeInfo.route,
+          intent: routeInfo.intent
+        });
+
         return;
       }
 
@@ -1187,13 +1248,20 @@ CRITICAL OPERATIONAL RULES:
       let ttftMs = 0;
       let tokenCount = 0;
 
-      const ollamaResponse = await fetch(`${OLLAMA_HOST}/api/generate`, {
+      // Retrieve tenant-isolated conversational context from persistent storage
+      const priorHistory = getRecentContextMessages(authenticatedUserId, 8);
+      const chatMessages = [
+        { role: 'system', content: systemPrompt },
+        ...priorHistory,
+        { role: 'user', content: text }
+      ];
+
+      const ollamaResponse = await fetch(`${OLLAMA_HOST}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: OLLAMA_MODEL,
-          prompt: text,
-          system: systemPrompt,
+          messages: chatMessages,
           stream: true
         }),
         signal: abortController.signal
@@ -1277,7 +1345,7 @@ CRITICAL OPERATIONAL RULES:
             continue;
           }
 
-          const token = parsed.response || '';
+          const token = parsed.message?.content || parsed.response || '';
           if (token) {
             if (!ttftRecorded) {
               ttftRecorded = true;
@@ -1336,6 +1404,27 @@ CRITICAL OPERATIONAL RULES:
         ragDocsCount: retrievedDocs.length,
         userId: authenticatedUserId,
         genId: genId
+      });
+
+      // Persist turn in tenant-isolated storage
+      saveMessage({
+        userId: authenticatedUserId,
+        role: 'user',
+        content: text,
+        route: routeInfo.route,
+        intent: routeInfo.intent
+      });
+      saveMessage({
+        userId: authenticatedUserId,
+        role: 'assistant',
+        content: fullResponseText,
+        route: routeInfo.route,
+        intent: routeInfo.intent,
+        metadata: {
+          tokens: tokenCount,
+          elapsedMs: llmTotalElapsedMs,
+          ragDocsCount: retrievedDocs.length
+        }
       });
 
       // If Kokoro was active, send audio_done and turn_done when queue drains

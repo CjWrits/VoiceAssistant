@@ -3,6 +3,7 @@ node_modules/
 
 # Local Vector Database & Artifacts
 chroma_db/
+data/
 
 # Logs & Temporary Files
 *.log
