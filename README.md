@@ -1,45 +1,62 @@
 # Sovereign Edge Conversational Voice Assistant ⚡
 
-A high-performance, 100% local edge conversational voice AI platform powered by Node.js, Fastify, Ollama (Llama 3.2), Xenova Semantic Router, ChromaDB with tenant-isolated RAG, and dual-engine voice synthesis (Browser Edge Speech + Kokoro-82M ONNX).
+A high-performance, 100% sovereign local edge conversational voice AI platform powered by Node.js, Fastify, Ollama (Llama 3.2), Xenova Semantic Router, ChromaDB with tenant-isolated RAG, embedded SQLite persistent storage, and dual-engine voice synthesis (Browser Edge Speech + Kokoro-82M ONNX).
 
 ---
 
 ## 🚀 Key Features
 
-* **100% Local & Sovereign**: Zero cloud dependencies, zero external API keys required. All text generation, semantic routing, vector embeddings, and speech synthesis run locally on your edge hardware.
-* **Semantic Router (MiniLM on CPU)**: Intelligent routing using `@xenova/transformers` (`all-MiniLM-L6-v2`) with cosine similarity scoring against dynamic trigger centroids to automatically route queries to isolated RAG or direct LLM bypass.
-* **Strict Multi-Tenant Isolated RAG**: Vector searches are strictly partitioned by tenant ID (`WHERE user_id = ?`) with fallback embedded vector support and negative-probe protections.
+* **100% Sovereign & Self-Hosted**: Zero cloud dependencies, zero external inference APIs. All LLM generation, semantic routing, vector embeddings, persistent storage, and speech synthesis execute locally on edge hardware.
+* **Cryptographic Authentication & Zero-Trust Tenant Isolation**: Every WebSocket handshake is verified with HMAC-SHA256 session tokens. Client payload `user_id` is never trusted for authorization; all database and RAG operations are strictly bounded to `authenticatedUserId`.
+* **Deterministic Verification Engine (Zero LLM Hallucination)**: Sensitive assertions (passphrases, escrow codes, badge IDs, clearance levels, credit limits) are evaluated via constant-time timing-safe cryptographic comparisons against authoritative vault records with zero LLM invocation.
+* **Persistent Storage & Multi-Turn Conversational Memory**: High-concurrency embedded SQLite in WAL mode (`PRAGMA journal_mode = WAL`) preserves dialog turns across browser reloads and server restarts. Ollama `/api/chat` maintains recent multi-turn context while isolating tenant histories.
+* **Progressive Intent Router**: Fast-path deterministic routing (< 1ms, 0 CPU embedding overhead) for greetings, control signals, and verifications; MiniLM CPU fallback with trigger centroids for RAG routing.
 * **Dual-Engine Speech Synthesis**:
-  * **Browser Edge Speech**: Zero-latency (0ms), immediate sentence streaming via Web Speech API.
-  * **Kokoro-82M ONNX**: High-fidelity local neural text-to-speech engine running on CPU with smooth clause chunking.
-* **Instant Conversational Barge-In**: Interrupt speech anytime by typing or speaking a new query. The system instantly stops audio and aborts upstream LLM generation.
-* **Modern Clean UI**: Refined light aesthetic with sleek telemetry HUD, live cosine similarity meter, tenant isolation filter, soundwave equalizer, and light/dark mode toggle.
+  * **Browser Edge Speech**: Zero-latency (0ms), immediate streaming via Web Speech API.
+  * **Kokoro-82M ONNX**: High-fidelity local neural text-to-speech engine running on CPU with dual-phase adaptive clause chunking.
+* **Instant Conversational Barge-In**: Interrupt speech anytime by typing or speaking. The system aborts upstream LLM generation via `AbortController` and drains audio queues immediately.
+* **Modern Clean UI**: Refined aesthetic with real-time telemetry HUD (TTFT, tokens/sec, routing latency), live tenant isolation indicators, chat history restoration, and light/dark theme toggle.
 
 ---
 
 ## 🛠️ Architecture Overview
 
 ```text
-User Input (WebSocket)
+CLIENT (WebSocket Handshake + HMAC-SHA256 Token)
       │
       ▼
-Semantic Router (MiniLM-L6-v2 CPU) ──> Cosine Sim >= 0.65?
-      ├────────────────────────┬────────────────────────┤
-     YES                       NO
-      ▼                        ▼
-ChromaDB / Vector Fallback   Direct Stream
-(WHERE user_id = tenant)       │
-      │                        │
-      ▼                        │
-Contextualized Spoken Prompt ◄─┘
+Server Derives authenticatedUserId (Zero Client Trust)
       │
       ▼
-Ollama (Llama-3.2-3B Streaming) [AbortController Support]
+Progressive Intent Router
+      ├───────────────────────┬────────────────────────┬──────────────────────┐
+      │ GREETING / CONTROL    │ SENSITIVE ASSERTION    │ OPEN QUERY           │
+      ▼                       ▼                        ▼                      │
+Direct Template         Deterministic Engine     MiniLM-L6-v2 Embedder        │
+(0ms, 0 CPU)            (Constant-Time Equal)    (Cosine Sim >= 0.68?)        │
+      │                       │                  ├──────────────┬─────────────┤
+      │                       │                 YES             NO            │
+      │                       │                  ▼              ▼             │
+      │                       │             ChromaDB /     Direct Chat        │
+      │                       │             Local Vault         │             │
+      │                       │             (WHERE user_id)     │             │
+      │                       │                  │              │             │
+      │                       │                  ▼              │             │
+      │                       │             Grounded Prompt ◄───┘             │
+      │                       │                  │                            │
+      │                       │                  ▼                            │
+      │                       │             SQLite WAL: Fetch Dialog History  │
+      │                       │                  │                            │
+      │                       │                  ▼                            │
+      │                       │             Ollama (/api/chat Stream)         │
+      │                       │                  │                            │
+      ▼                       ▼                  ▼                            │
+UI Stream & Adaptive Voice Synthesizer ◄─────────┴────────────────────────────┘
+      ├── Browser Edge Speech (Instant 0ms)
+      └── Kokoro-82M ONNX Neural TTS (Adaptive Clause Chunks)
       │
-      ├──> Instant Text Tokens (UI Stream)
-      └──> Adaptive Voice Synthesizer
-            ├── Browser Edge Speech (Instant 0ms)
-            └── Kokoro-82M ONNX TTS (Binary WAV Chunks)
+      ▼
+SQLite WAL: Persist Turn (Tenant-Partitioned Audit Trail)
 ```
 
 ---
@@ -72,20 +89,26 @@ npm start
 Open your browser at [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
 ### 4. Run Automated End-to-End Tests
+The repository includes an extensive automated security, grounding, anti-sycophancy, and persistent memory benchmark:
 ```bash
 npm test
 ```
 
 ---
 
-## 🛡️ Tenant Isolation Demo Queries
+## 🛡️ Benchmark Verification Matrix (26/26 Tests Passing)
 
-| Tenant | Query | Expected Route | Expected Result |
-| :--- | :--- | :--- | :--- |
-| **User A (Alice Chen)** | *"What is my emergency recovery secret passphrase?"* | `CHROMA_RAG` | Returns `CYBER-PHOENIX-9842` |
-| **User B (Bob Martinez)** | *"What is my emergency recovery secret passphrase?"* | `CHROMA_RAG` | Access Denied (0 records found in partition) |
-| **User B (Bob Martinez)** | *"What is my authorized Swiss escrow account code?"* | `CHROMA_RAG` | Returns `ALPINE-VAULT-7719` |
-| **Any Tenant** | *"Explain what an edge node is in 10 words."* | `DIRECT_OLLAMA` | Direct LLM response (RAG bypassed) |
+| Test Category | Tested Constraint | Verification Guarantee |
+| :--- | :--- | :--- |
+| **Authentication** | Handshake Enforcement | Unauthenticated and tampered HMAC tokens rejected immediately. |
+| **Tenant Isolation** | Spoofing Immunity | Malicious payload `user_id` ignored; strict partition isolation enforced. |
+| **Verification** | Zero LLM Hallucination | Exact timing-safe constant-time evaluation of credentials with zero LLM invocation. |
+| **Synthetic Generation** | Intent Differentiation | Generation requests bypass RAG and never leak stored secrets. |
+| **Grounded RAG** | Evidence Boundary | Context wrapped in untrusted data delimiters; refutes false premises. |
+| **Router Latency** | Fast-Path Execution | Greetings and commands route in ≤ 1ms with 0 CPU embedding computation. |
+| **Telemetry** | Observability | Every turn emits structured metrics (routing, retrieval, TTFT, generation, tokens/s). |
+| **Anti-Sycophancy** | Guardrail Robustness | System rejects false IP, credit limit, and role assertions; resists jailbreak overrides. |
+| **Persistent Storage** | Session Continuity | SQLite WAL records turns; `/api/history` restores dialog; cross-tenant history is strictly isolated. |
 
 ---
 
