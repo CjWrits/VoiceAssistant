@@ -880,6 +880,27 @@ app.get('/api/auth/token', async (req, reply) => {
   return { token, profile: TENANT_PROFILES[tenant] };
 });
 
+// Robust, crash-proof WebSocket send helper
+function safeSend(ws, payload, options) {
+  if (ws && ws.readyState === 1) { // 1 === WebSocket.OPEN
+    try {
+      const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      ws.send(data, options);
+    } catch (err) {
+      // Socket closed concurrently; ignore safely
+    }
+  }
+}
+
+// Global process error handlers to prevent unhandled rejection crashes
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]:', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Unhandled Rejection]:', reason);
+});
+
 // ============================================================================
 // WEBSOCKET HANDLER: AUTHENTICATED REAL-TIME AI PIPELINE
 // ============================================================================
@@ -895,11 +916,11 @@ app.get('/ws', { websocket: true }, (socket, req) => {
 
   if (!session) {
     console.warn(`[Security Alert] Rejected unauthenticated WebSocket connection from ${req.ip}`);
-    ws.send(JSON.stringify({
+    safeSend(ws, {
       type: 'error',
       message: 'Unauthorized: Valid signed session token required. Obtain from /api/auth/token'
-    }));
-    ws.close(1008, 'Policy Violation: Unauthenticated');
+    });
+    try { ws.close(1008, 'Policy Violation: Unauthenticated'); } catch (e) {}
     return;
   }
 
@@ -912,19 +933,19 @@ app.get('/ws', { websocket: true }, (socket, req) => {
   console.log(`⚡ Authenticated client connected: [${authenticatedUserId} - ${session.name}] (${session.role})`);
 
   // Send authentication acknowledgment
-  ws.send(JSON.stringify({
+  safeSend(ws, {
     type: 'auth_ack',
     userId: authenticatedUserId,
     name: session.name,
     role: session.role
-  }));
+  });
 
   ws.on('message', async (rawMessage) => {
     const turnStartTimestamp = Date.now();
 
     // 1. Admission Control: Max payload size
     if (rawMessage.length > MAX_PAYLOAD_BYTES) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Payload exceeds maximum allowed size (32KB)' }));
+      safeSend(ws, { type: 'error', message: 'Payload exceeds maximum allowed size (32KB)' });
       return;
     }
 
@@ -932,7 +953,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
     const now = Date.now();
     ws.requestTimestamps = ws.requestTimestamps.filter(t => (now - t) < RATE_LIMIT_WINDOW_MS);
     if (ws.requestTimestamps.length >= RATE_LIMIT_MAX_REQUESTS) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Rate limit exceeded: Too many requests in window. Please wait.' }));
+      safeSend(ws, { type: 'error', message: 'Rate limit exceeded: Too many requests in window. Please wait.' });
       return;
     }
     ws.requestTimestamps.push(now);
@@ -941,7 +962,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
     try {
       payload = JSON.parse(rawMessage.toString());
     } catch (e) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON payload format' }));
+      safeSend(ws, { type: 'error', message: 'Invalid JSON payload format' });
       return;
     }
 
@@ -951,7 +972,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
     const reqId = request_id || `req_${Date.now()}`;
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      ws.send(JSON.stringify({ type: 'error', request_id: reqId, message: 'Field "text" must be a non-empty string' }));
+      safeSend(ws, { type: 'error', request_id: reqId, message: 'Field "text" must be a non-empty string' });
       return;
     }
 
@@ -977,7 +998,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
       const routingElapsedMs = routeInfo.elapsedMs;
 
       // Stream routing decision telemetry to client
-      ws.send(JSON.stringify({
+      safeSend(ws, {
         type: 'router_decision',
         request_id: reqId,
         intent: routeInfo.intent,
@@ -987,21 +1008,21 @@ app.get('/ws', { websocket: true }, (socket, req) => {
         elapsed_ms: routingElapsedMs,
         userId: authenticatedUserId,
         genId: genId
-      }));
+      });
 
       // Short-circuit: Direct Template Responses (Greetings, Stop, Deterministic Verification)
       if (routeInfo.route === 'DIRECT_TEMPLATE') {
         const fullResponseText = routeInfo.template;
 
         // Deliver text immediately
-        ws.send(JSON.stringify({
+        safeSend(ws, {
           type: 'text_delta',
           request_id: reqId,
           token: fullResponseText,
           genId: genId
-        }));
+        });
 
-        ws.send(JSON.stringify({
+        safeSend(ws, {
           type: 'text_done',
           done: true,
           request_id: reqId,
@@ -1009,7 +1030,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
           route: routeInfo.route,
           userId: authenticatedUserId,
           genId: genId
-        }));
+        });
 
         // Send voice for template if Kokoro requested
         if (voice_engine === 'kokoro' && kokoro) {
@@ -1018,8 +1039,8 @@ app.get('/ws', { websocket: true }, (socket, req) => {
             const audio = await kokoro.generate(fullResponseText, { voice: 'af_heart', speed: 1.1 });
             const wavBuffer = Buffer.from(audio.toWav());
             if (ws.readyState === 1 && ws.currentGenId === genId) {
-              ws.send(wavBuffer, { binary: true });
-              ws.send(JSON.stringify({ type: 'audio_done', request_id: reqId, genId: genId }));
+              safeSend(ws, wavBuffer, { binary: true });
+              safeSend(ws, { type: 'audio_done', request_id: reqId, genId: genId });
             }
           } catch (e) {
             console.error('TTS error on template:', e);
@@ -1027,7 +1048,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
         }
 
         // Emit turn telemetry
-        ws.send(JSON.stringify({
+        safeSend(ws, {
           type: 'turn_done',
           request_id: reqId,
           telemetry: {
@@ -1042,7 +1063,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
             tokensPerSec: 0,
             voiceEngine: voice_engine
           }
-        }));
+        });
         return;
       }
 
@@ -1090,7 +1111,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
           }
         }
 
-        ws.send(JSON.stringify({
+        safeSend(ws, {
           type: 'rag_context',
           request_id: reqId,
           documents: retrievedDocs,
@@ -1098,7 +1119,7 @@ app.get('/ws', { websocket: true }, (socket, req) => {
           count: retrievedDocs.length,
           userId: authenticatedUserId,
           genId: genId
-        }));
+        });
       }
 
       const retrievalElapsedMs = Date.now() - ragStart;
@@ -1198,7 +1219,7 @@ CRITICAL OPERATIONAL RULES:
         if (!isKokoroActive || !chunkText || chunkText.trim().length === 0) return;
 
         audioQueuePromise = audioQueuePromise.then(async () => {
-          if (ws.currentGenId !== genId) return;
+          if (!ws || ws.readyState !== 1 || ws.currentGenId !== genId) return;
 
           const cleanSpeechText = chunkText.replace(/[*_#`~[\]]/g, '').trim();
           if (cleanSpeechText.length === 0) return;
@@ -1216,7 +1237,7 @@ CRITICAL OPERATIONAL RULES:
             console.log(`  [TTS Synthesized] "${cleanSpeechText.slice(0, 35)}..." (${wavBuffer.length} bytes, ${ttsDuration}ms)`);
 
             if (ws.readyState === 1 && ws.currentGenId === genId) {
-              ws.send(wavBuffer, { binary: true });
+              safeSend(ws, wavBuffer, { binary: true });
             }
           } catch (ttsErr) {
             console.error(`  ⚠️ [TTS Error] Could not synthesize "${cleanSpeechText}":`, ttsErr.message);
@@ -1228,13 +1249,18 @@ CRITICAL OPERATIONAL RULES:
 
       // Read LLM stream chunks
       while (true) {
+        if (!ws || ws.readyState !== 1 || ws.currentGenId !== genId) {
+          try { reader.cancel(); } catch (e) {}
+          return;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
 
-        // Barge-in check
-        if (ws.currentGenId !== genId) {
-          console.log(`[LLM Abort] Query #${genId} superseded by user barge-in`);
-          reader.cancel();
+        // Barge-in check or client disconnect
+        if (ws.readyState !== 1 || ws.currentGenId !== genId) {
+          console.log(`[LLM Abort] Query #${genId} superseded by user barge-in or client disconnect`);
+          try { reader.cancel(); } catch (e) {}
           return;
         }
 
@@ -1263,12 +1289,12 @@ CRITICAL OPERATIONAL RULES:
             sentenceBuffer += token;
 
             // Stream text delta immediately
-            ws.send(JSON.stringify({
+            safeSend(ws, {
               type: 'text_delta',
               request_id: reqId,
               token: token,
               genId: genId
-            }));
+            });
 
             // Adaptive Voice Chunking for Kokoro
             if (isKokoroActive) {
@@ -1300,7 +1326,7 @@ CRITICAL OPERATIONAL RULES:
       const tokensPerSec = parseFloat((tokenCount / (llmTotalElapsedMs / 1000)).toFixed(2)) || 0;
 
       // Signal text stream completion
-      ws.send(JSON.stringify({
+      safeSend(ws, {
         type: 'text_done',
         done: true,
         request_id: reqId,
@@ -1310,14 +1336,14 @@ CRITICAL OPERATIONAL RULES:
         ragDocsCount: retrievedDocs.length,
         userId: authenticatedUserId,
         genId: genId
-      }));
+      });
 
       // If Kokoro was active, send audio_done and turn_done when queue drains
       if (isKokoroActive) {
         audioQueuePromise.then(() => {
           if (ws.readyState === 1 && ws.currentGenId === genId) {
-            ws.send(JSON.stringify({ type: 'audio_done', request_id: reqId, genId: genId }));
-            ws.send(JSON.stringify({
+            safeSend(ws, { type: 'audio_done', request_id: reqId, genId: genId });
+            safeSend(ws, {
               type: 'turn_done',
               request_id: reqId,
               telemetry: {
@@ -1333,12 +1359,12 @@ CRITICAL OPERATIONAL RULES:
                 tokensPerSec: tokensPerSec,
                 voiceEngine: voice_engine
               }
-            }));
+            });
           }
         });
       } else {
         // Emit complete structured turn telemetry immediately for browser speech or text
-        ws.send(JSON.stringify({
+        safeSend(ws, {
           type: 'turn_done',
           request_id: reqId,
           telemetry: {
@@ -1354,20 +1380,20 @@ CRITICAL OPERATIONAL RULES:
             tokensPerSec: tokensPerSec,
             voiceEngine: voice_engine
           }
-        }));
+        });
       }
 
     } catch (flowErr) {
       if (flowErr.name === 'AbortError') {
-        console.log(`[WS Request #${genId}] Aborted cleanly by barge-in.`);
+        console.log(`[WS Request #${genId}] Aborted cleanly by barge-in or client disconnect.`);
         return;
       }
       console.error('[Pipeline Execution Error]:', flowErr);
-      ws.send(JSON.stringify({
+      safeSend(ws, {
         type: 'error',
         request_id: reqId,
         message: `Pipeline failure: ${flowErr.message}`
-      }));
+      });
     } finally {
       if (abortController && ws.currentAbortController === abortController) {
         ws.currentAbortController = null;
@@ -1379,6 +1405,7 @@ CRITICAL OPERATIONAL RULES:
     console.log(`⚡ WebSocket disconnected: [${authenticatedUserId}]`);
     if (ws.currentAbortController) {
       try { ws.currentAbortController.abort(); } catch (e) {}
+      ws.currentAbortController = null;
     }
   });
 });
